@@ -8,8 +8,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.stereotype.Component;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 
 import com.meialuaquadrado.nexusai.adapters.in.repositories.UserRepository;
 import com.meialuaquadrado.nexusai.adapters.in.User;
@@ -20,8 +18,6 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 
 import java.util.Map;
-import java.util.Date;
-import java.util.stream.Collectors;
 
 @Component
 public class JwtGenerator {
@@ -34,12 +30,12 @@ public class JwtGenerator {
     }
 
     public String generateToken(Authentication authentication) {
-        Object principal = authentication.getPrincipal();
+        String username = authentication.getName();
         Date now = new Date();
         Date expiry = new Date(now.getTime() + SecurityConstants.JWT_EXPIRATION);
 
         // 1) Busca sua entidade real no banco
-        User domainUser = userRepository.findByUserName(username)
+        User domainUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado no DB"));
 
         // 2) Monta as claims
@@ -50,10 +46,10 @@ public class JwtGenerator {
 
         // 3) Gera o token
         return Jwts.builder()
-                .setClaims(claims)
-                .setSubject(username)
-                .setIssuedAt(now)
-                .setExpiration(expiry)
+                .claims(claims)
+                .subject(username)
+                .issuedAt(now)
+                .expiration(expiry)
                 .signWith(Keys.hmacShaKeyFor(
                         SecurityConstants.JWT_SECRET.getBytes(StandardCharsets.UTF_8)),
                         SignatureAlgorithm.HS256)
