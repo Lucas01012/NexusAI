@@ -23,7 +23,7 @@ import com.meialuaquadrado.nexusai.models.AiDTOs.MessageDto;
 @Service
 public class ChatService {
 
-    @Value("${deepseek.api.key}")
+    @Value("${openrounterbarreto.api.key}")
     private String apiKey;
 
     private final RestTemplate restTemplate;
@@ -41,7 +41,7 @@ public class ChatService {
         this.messageRepository = messageRepository;
     }
 
-    public String callGemmaApi(String prompt) {
+    public String callOpenRouter(String prompt, String model ) {
         String url = "https://openrouter.ai/api/v1/chat/completions";
 
         HttpHeaders headers = new HttpHeaders();
@@ -53,7 +53,7 @@ public class ChatService {
         message.setRole("user");
 
         AiRequest request = new AiRequest();
-        request.setModel("google/gemma-3n-e4b-it:free");
+        request.setModel(model);
         request.setMessages(List.of(message));
 
         HttpEntity<AiRequest> entity = new HttpEntity<>(request, headers);
@@ -65,34 +65,5 @@ public class ChatService {
         } catch (Exception e) {
             return "Deu Errado: " + e;
         }
-
-        
-    }
-    public String callllamaApi(String prompt) {
-        String url = "https://openrouter.ai/api/v1/chat/completions";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Authorization", "Bearer " + apiKey);
-
-        MessageDto message = new MessageDto();
-        message.setContent(prompt);
-        message.setRole("user");
-
-        AiRequest request = new AiRequest();
-        request.setModel("meta-llama/llama-3.3-8b-instruct:free");
-        request.setMessages(List.of(message));
-
-        HttpEntity<AiRequest> entity = new HttpEntity<>(request, headers);
-        try {
-            
-            ResponseEntity<AiResponse> response = restTemplate.postForEntity(url, entity, AiResponse.class);
-
-            return response.getBody().getFirstAnswer();
-        } catch (Exception e) {
-            return "Deu Errado: " + e;
-        }
-
-        
     }
 }

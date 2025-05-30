@@ -2,6 +2,9 @@ package com.meialuaquadrado.nexusai.adapters.in;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -11,6 +14,10 @@ public class ChatSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    public Long getId() {
+        return id;
+    }
+
     private String sessionTitle;
     private LocalDateTime createdAt;
 
@@ -19,6 +26,7 @@ public class ChatSession {
     private User user;
 
     @OneToMany(mappedBy = "chatSession", cascade = CascadeType.ALL)
+    @JsonBackReference
     private List<ChatMessage> messages;
 
     public String getSessionTitle() {

@@ -3,6 +3,8 @@ package com.meialuaquadrado.nexusai.adapters.in;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -27,6 +29,7 @@ public class User {
         this.id = id;
     }
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonManagedReference
     private List<ChatSession> sessions;
 
     public String getUsername() {

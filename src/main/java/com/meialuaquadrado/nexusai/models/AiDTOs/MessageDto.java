@@ -3,6 +3,13 @@ package com.meialuaquadrado.nexusai.models.AiDTOs;
 public class MessageDto {
     private String role;
     private String content;
+    private String  model;
+    public String getModel() {
+        return model;
+    }
+    public void setModel(String model) {
+        this.model = model;
+    }
     public String getRole() {
         return role;
     }
