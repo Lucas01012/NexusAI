@@ -1,28 +1,21 @@
-package com.meialuaquadrado.nexusai.adapters.in;
+package com.meialuaquadrado.nexusai.models;
 
 import java.time.LocalDateTime;
-import jakarta.persistence.*;
 
-@Entity
-@Table(name = "chat_messages")
-public class ChatMessage {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class ChatMessageDto {
     private Long id;
+    private String role;
+    private String llmName;
+    private String content;
+    private LocalDateTime timestamp;
+
     public Long getId() {
         return id;
     }
 
-    private String role;
-    private String llmName;
-    @Column(columnDefinition = "TEXT")
-    private String content;
-    private LocalDateTime timestamp;
-
-    @ManyToOne
-    @JoinColumn(name = "chat_session_id")
-    private ChatSession chatSession;
-    
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     public String getRole() {
         return role;
@@ -56,11 +49,11 @@ public class ChatMessage {
         this.timestamp = timestamp;
     }
 
-    public ChatSession getChatSession() {
-        return chatSession;
-    }
-
-    public void setChatSession(ChatSession chatSession) {
-        this.chatSession = chatSession;
+    public ChatMessageDto(Long id, String role, String llmName, String content, LocalDateTime timestamp) {
+        this.id = id;
+        this.role = role;
+        this.llmName = llmName;
+        this.content = content;
+        this.timestamp = timestamp;
     }
 }

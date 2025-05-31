@@ -24,13 +24,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.meialuaquadrado.nexusai.adapters.in.ChatMessage;
 import com.meialuaquadrado.nexusai.adapters.in.ChatSession;
 import com.meialuaquadrado.nexusai.adapters.in.User;
+import com.meialuaquadrado.nexusai.adapters.in.repositories.ChatMessageRepository;
 import com.meialuaquadrado.nexusai.adapters.in.repositories.ChatSessionRepository;
 import com.meialuaquadrado.nexusai.adapters.in.repositories.UserRepository;
 import com.meialuaquadrado.nexusai.adapters.in.security.CustomUserDetail;
 import com.meialuaquadrado.nexusai.adapters.in.security.SecurityUtils;
 import com.meialuaquadrado.nexusai.adapters.in.services.ChatService;
+import com.meialuaquadrado.nexusai.models.ChatMessageDto;
+import com.meialuaquadrado.nexusai.models.ChatDto;
 import com.meialuaquadrado.nexusai.models.LoginDto;
 import com.meialuaquadrado.nexusai.models.AiDTOs.AiResponse;
 import com.meialuaquadrado.nexusai.models.AiDTOs.MessageDto;
@@ -43,20 +47,19 @@ import io.swagger.v3.oas.annotations.Operation;
 @RequestMapping("/chatSessions")
 public class ChatSessionController {
     private ChatSessionRepository chatSessionRepository;
+    private ChatMessageRepository chatMessageRepository;
     private UserRepository userRepository;
     private ChatService chatService;
     
-
-    
-
     @Autowired
     ObjectMapper objectMapper;
 
 
-    public ChatSessionController(ChatSessionRepository chatSessionRepository, ChatService chatService, UserRepository userRepository)  {
+    public ChatSessionController(ChatSessionRepository chatSessionRepository, ChatService chatService, UserRepository userRepository, ChatMessageRepository chatMessageRepository)  {
         this.chatSessionRepository = chatSessionRepository;
         this.chatService = chatService;
         this.userRepository = userRepository;
+        this.chatMessageRepository = chatMessageRepository;
     }
 
     @Operation(summary = "Retorna todos as Session do Usuario Logado")
@@ -77,6 +80,46 @@ public class ChatSessionController {
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(sessionDtos);
+    }
+
+    @Operation(summary = "Retorna as todas mensagens da sessão")
+    @GetMapping("/{sessionId}/messages")
+    public ResponseEntity<?> listSessionMessages(@PathVariable Long sessionId) {
+        Long userId;
+        try {
+            userId = SecurityUtils.getCurrentUser().getId();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                .body(Map.of("message", "Usuário não autenticado"));
+        }
+
+        Optional<ChatSession> sessionOpt = chatSessionRepository.findById(sessionId);
+
+        if (sessionOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                .body(Map.of("message", "Sessão não encontrada"));
+        }
+
+        ChatSession session = sessionOpt.get();
+
+        if (!session.getUser().getId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(Map.of("message", "Você não tem permissão para acessar esta sessão"));
+        }
+
+        List<ChatMessage> messages = chatMessageRepository.findByChatSessionIdOrderByTimestampAsc(sessionId);
+
+        List<ChatMessageDto> messageDtos = messages.stream()
+                .map(msg -> new ChatMessageDto(
+                        msg.getId(),
+                        msg.getRole(),
+                        msg.getLlmName(),
+                        msg.getContent(),
+                        msg.getTimestamp()
+                ))
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(messageDtos);
     }
 
     @Operation(summary = "Inseri uma nova session para o ususario logado")
@@ -179,11 +222,10 @@ public class ChatSessionController {
 
         return ResponseEntity.ok(Map.of("message", "Sessão deletada com sucesso"));
     }
-
-
-    @Operation(summary = "Conversa com chatbot. Em desenvolvimento ainda.")
-    @PostMapping("/chat")
-    public ResponseEntity<Map<String, String>>  login(@RequestBody MessageDto dto) {
+    
+    @Operation(summary = "Conversa com llm, precisa definir o modelo e esta trazendo o contexto de toda sessão.")
+    @PostMapping("{sessionId}/chatcontext")
+    public ResponseEntity<Map<String, String>> chat(@PathVariable Long sessionId, @RequestBody ChatDto dto) {
         Long userId;
         try {
             userId = SecurityUtils.getCurrentUser().getId();
@@ -192,13 +234,33 @@ public class ChatSessionController {
                                 .body(Map.of("message", "Usuário não autenticado"));
         }
 
+        // ⚠ Aqui você precisa passar o sessionId no DTO também!
+        String llmResponse = chatService.callOpenRouterWithContext(
+            sessionId,
+            dto.getContent(),
+            dto.getModel(),
+            4000 // limite de caracteres no histórico total
+        );
+
+        return ResponseEntity.ok(Map.of("resposta", llmResponse));
+    }
+
+    @Operation(summary = "Conversa com chatbot (sem contexto, apenas a última mensagem)")
+    @PostMapping("{sessionId}/chatsimple")
+    public ResponseEntity<Map<String, String>> simpleChat(@PathVariable Long sessionId, @RequestBody MessageDto dto) {
+        Long userId;
+        try {
+            userId = SecurityUtils.getCurrentUser().getId();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                .body(Map.of("message", "Usuário não autenticado"));
+        }
 
         Map<String, String> response = new HashMap<>();
 
-        String aiResponse = chatService.callOpenRouter(dto.getContent(), dto.getModel());
-        
-        response.put("resposta", aiResponse );
+        String aiResponse = chatService.callOpenRouterWithoutContext(sessionId,dto.getContent(), dto.getModel());
+
+        response.put("resposta", aiResponse);
         return ResponseEntity.ok(response);
     }
-
 }
