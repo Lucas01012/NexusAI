@@ -238,8 +238,7 @@ public class ChatSessionController {
         String llmResponse = chatService.callOpenRouterWithContext(
             sessionId,
             dto.getContent(),
-            dto.getModel(),
-            4000 // limite de caracteres no histórico total
+            dto.getModel()
         );
 
         return ResponseEntity.ok(Map.of("resposta", llmResponse));
