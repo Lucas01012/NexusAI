@@ -150,7 +150,7 @@ public class ChatSessionController {
         
         try{
             ChatSession savedSession = chatSessionRepository.save(newSession);
-            ChatSessionDto chatsession = new ChatSessionDto(savedSession.getUser().getId(), savedSession.getSessionTitle(), savedSession.getCreatedAt());
+            ChatSessionDto chatsession = new ChatSessionDto(savedSession.getId(), savedSession.getSessionTitle(), savedSession.getCreatedAt());
 
             return ResponseEntity.ok().body(chatsession);
         }
